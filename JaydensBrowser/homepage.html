@@ -1,0 +1,235 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="20">
+  <link rel="stylesheet" href="homepage.css">
+  <title>Homepage</title>
+</head>
+<body>
+  <h6>Page refreshes in <span id="countdown">15</span> seconds</h6>
+  <h1>Welcome to Jaydens' Browser!</h1>
+  <p>Type a URL or search term below to get started.</p>
+
+  <input id="homepage-search" type="text" placeholder="Enter URL or search term" autocomplete="off" />
+  <ul id="suggestions" role="listbox" aria-label="Search suggestions"></ul>
+
+  <script>
+    // Countdown timer - read refresh interval from meta tag
+    const metaRefresh = document.querySelector('meta[http-equiv="refresh"]');
+    const refreshSeconds = metaRefresh ? parseInt(metaRefresh.getAttribute('content'), 10) : 15;
+    
+    let countdown = refreshSeconds;
+    const countdownEl = document.getElementById('countdown');
+    countdownEl.textContent = refreshSeconds;
+    
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      countdownEl.textContent = countdown;
+      if (countdown <= 0) {
+        clearInterval(countdownInterval);
+      }
+    }, 1000);
+  </script>
+
+  <script>
+    (function () {
+      const searchBar = document.getElementById('homepage-search');
+      searchBar.focus();
+      const list = document.getElementById('suggestions');
+
+      // Auto-focus the search bar
+
+      let timer = null;
+      let selectedIndex = -1; // for keyboard navigation
+
+      function clearSuggestions() {
+        list.innerHTML = '';
+        list.style.display = 'none';
+        selectedIndex = -1;
+      }
+
+      function showSuggestions(items) {
+        list.innerHTML = '';
+        selectedIndex = -1;
+
+        items.forEach((phrase, idx) => {
+          const li = document.createElement('li');
+          li.textContent = phrase;
+          li.setAttribute('role', 'option');
+          li.dataset.index = idx;
+
+          li.addEventListener('click', () => {
+            navigateFromSuggestion(phrase);
+          });
+
+          li.addEventListener('mousemove', () => {
+            // highlight on hover
+            updateHover(idx);
+          });
+
+          list.appendChild(li);
+        });
+
+        if (items.length) {
+          list.style.display = 'block';
+        } else {
+          clearSuggestions();
+        }
+      }
+
+      function updateHover(idx) {
+        const children = Array.from(list.children);
+        children.forEach((c, i) => c.classList.toggle('hover', i === idx));
+        selectedIndex = idx;
+      }
+
+      // Decide whether an input is a URL or a search query, and normalize it.
+      function isLikelyURL(input) {
+        if (!input) return false;
+        const s = input.trim();
+        if (!s) return false;
+        // If contains spaces, treat as search
+        if (/\s/.test(s)) return false;
+
+        // If it starts with protocol-like (scheme:), accept only http/https/ftp
+        const schemeMatch = s.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/);
+        if (schemeMatch) {
+          const scheme = schemeMatch[1].toLowerCase();
+          return ['http', 'https', 'ftp'].includes(scheme);
+        }
+
+        // Leading '//' (protocol-relative) -> treat as URL
+        if (s.startsWith('//')) return true;
+
+        // IP address (with optional port/path)
+        const ipLike = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?(\/.*)?$/;
+        if (ipLike.test(s)) return true;
+
+        // Domain-like: something.tld[/...]
+        const domainLike = /^([a-z0-9-]+\.)+[a-z]{2,24}(\/.*)?$/i;
+        if (domainLike.test(s)) return true;
+
+        return false;
+      }
+
+      function normalizeToUrl(input) {
+        const s = String(input || '').trim();
+        if (!s) return null;
+
+        // If contains unsafe scheme (javascript:), return null
+        const schemeMatch = s.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/);
+        if (schemeMatch) {
+          const scheme = schemeMatch[1].toLowerCase();
+          if (!['http', 'https', 'ftp'].includes(scheme)) return null;
+          console.debug('normalizeToUrl: detected safe scheme, returning as-is:', s);
+          return s; // safe scheme, return as-is
+        }
+
+        if (s.startsWith('//')) return 'https:' + s;
+
+        if (isLikelyURL(s)) {
+          // Add https:// by default when no scheme was provided
+          const normalized = 'https://' + s;
+          console.debug('normalizeToUrl: normalized domain-like to', normalized);
+          return normalized;
+        }
+
+        return null;
+      }
+
+      function navigateFromSuggestion(phrase) {
+        const query = String(phrase || '').trim();
+        const maybeUrl = normalizeToUrl(query);
+        const destination = maybeUrl || ('https://www.google.com/search?q=' + encodeURIComponent(query));
+
+        console.info('navigateFromSuggestion: query="' + query + '", destination=' + destination);
+
+        try {
+          if (window.electronAPI && window.electronAPI.sendNavigate) {
+            window.electronAPI.sendNavigate(destination);
+          } else {
+            window.location.href = destination;
+          }
+        } catch (err) {
+          console.error('Navigation failed:', err, 'destination=', destination);
+        }
+
+        clearSuggestions();
+      }
+
+      // Enter key now uses the same navigation logic as the former Go button.
+
+      function fetchSuggestions(q) {
+        // DuckDuckGo autocomplete endpoint, gets JSON
+        return fetch('https://duckduckgo.com/ac/?q=' + encodeURIComponent(q), { cache: 'no-store' })
+          .then(r => r.ok ? r.json() : [])
+          .then(data => {
+            if (!Array.isArray(data)) return [];
+            // map to phrases and slice to 10
+            return data.map(d => d.phrase || '').filter(Boolean).slice(0, 10);
+          })
+          .catch(() => []);
+      }
+
+      searchBar.addEventListener('input', () => {
+        const q = searchBar.value.trim();
+        clearTimeout(timer);
+        if (!q) { clearSuggestions(); return; }
+
+        timer = setTimeout(() => {
+          fetchSuggestions(q).then(results => {
+            if (results.length === 0) clearSuggestions();
+            else showSuggestions(results);
+          });
+        }, 200);
+      });
+
+      // Keyboard navigation: Up, Down, Enter, Esc
+      searchBar.addEventListener('keydown', (e) => {
+        const children = Array.from(list.children);
+
+        if (e.key === 'ArrowDown' && children.length) {
+          e.preventDefault();
+          const next = Math.min(children.length - 1, selectedIndex + 1);
+          updateHover(next);
+          children[next].scrollIntoView({ block: 'nearest' });
+          return;
+        }
+
+        if (e.key === 'ArrowUp' && children.length) {
+          e.preventDefault();
+          const prev = Math.max(0, selectedIndex - 1);
+          updateHover(prev);
+          children[prev].scrollIntoView({ block: 'nearest' });
+          return;
+        }
+
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (children.length && selectedIndex >= 0 && children[selectedIndex]) {
+            navigateFromSuggestion(children[selectedIndex].textContent);
+          } else {
+            const query = searchBar.value.trim();
+            if (!query) return;
+            // reuse the same navigation helper for Enter as the Go button did
+            navigateFromSuggestion(query);
+          }
+          return;
+        }
+
+        if (e.key === 'Escape') {
+          clearSuggestions();
+        }
+      });
+
+      // If user clicks outside, close suggestions
+      document.addEventListener('click', (ev) => {
+        if (!ev.composedPath().includes(list) && !ev.composedPath().includes(searchBar)) {
+          clearSuggestions();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

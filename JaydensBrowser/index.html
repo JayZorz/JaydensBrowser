@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    <!--<meta http-equiv="refresh" content="5">-->
+    <link rel="stylesheet" href="index.css">
+    <meta charset="UTF-8">
+        <link rel="stylesheet" href="https://unpkg.com/98.css">
+        <title>Jaydens' Browser</title>
+    </head>
+    <body>
+        <div id="titlebar">
+            <div class="title-text">Jaydens' Browser (Stable Build 1.0.0)</div>
+            <div id="tabs-container"></div>
+            <button id="new-tab">+</button>
+            <div class="titlebar-spacer"></div>
+            <button id="restart">⟳</button>
+            <div id="titlebar-buttons">
+                <button id="minimize">_</button>
+                <button id="maximize">□</button>
+                <button id="close">X</button>
+            </div>
+        </div>
+
+        <div id="toolbar">
+            <button id="back"><</button>
+            <button id="forward">></button>
+            <button id="reload">⟳</button>
+            <input id="address" type="text" placeholder="Type URL or search and press Enter">
+        </div>
+
+        <div id="content"></div>
+
+        <script src="renderer.js"></script>
+    </body>
+</html>
