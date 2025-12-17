@@ -97,6 +97,8 @@ body {
     border-radius: 5px;
     transition: 0.15s ease;
     -webkit-app-region: no-drag;
+    flex-shrink: 0;
+    margin-right: 4px;
 }
 
 #titlebar button#new-tab:hover {
@@ -108,7 +110,8 @@ body {
     align-items: center;
     gap: 4px;
     overflow: auto;
-    max-width: 400px;
+    flex: 1;
+    min-width: 0;
 }
 
 #tabbar {
@@ -131,6 +134,8 @@ body {
     cursor: pointer;
     -webkit-app-region: no-drag;
     user-select: none;
+    flex-shrink: 1;
+    min-width: 60px;
 }
 
 .tab:hover {
@@ -190,9 +195,10 @@ body {
     display: inline-flex;
     justify-content: center;
     align-items: center;
+    font-weight: bold;
     width: 16px;
     height: 16px;
-    font-size: 10px;
+    font-size: 11px;
     background: #ffd6ee;
     border: 2px solid #fff;
     border-right-color: #e3a9c8;
