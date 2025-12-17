@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
 
 Menu.setApplicationMenu(null);
@@ -22,8 +22,7 @@ function createWindow() {
 
   win.loadFile('index.html');
   win.maximize();
-  
-  // If there's a pending URL (from command line), navigate to it
+
   win.webContents.on('did-finish-load', () => {
     if (pendingUrl) {
       win.webContents.send('navigate-to-url', pendingUrl);
@@ -34,7 +33,6 @@ function createWindow() {
   win.on('closed', () => { win = null; });
 }
 
-// Handle URLs passed via command line
 function handleUrl(url) {
   if (win) {
     win.webContents.send('navigate-to-url', url);
@@ -43,18 +41,15 @@ function handleUrl(url) {
   }
 }
 
-// Windows: Handle protocol (jaydensbrowser://)
 if (process.platform === 'win32') {
   app.setAsDefaultProtocolClient('jaydensbrowser');
 }
 
-// Handle deep links
 app.on('open-url', (event, url) => {
   event.preventDefault();
   handleUrl(url);
 });
 
-// Handle command line arguments
 if (process.defaultApp) {
   if (process.argv.length >= 2) {
     app.setAsDefaultProtocolClient('jaydensbrowser', process.execPath, [path.resolve(process.argv[1])]);
@@ -63,7 +58,6 @@ if (process.defaultApp) {
   app.setAsDefaultProtocolClient('jaydensbrowser');
 }
 
-// Check for URL in command line
 const args = process.argv.slice(1);
 if (args.length > 0 && args[0].startsWith('jaydensbrowser://')) {
   pendingUrl = args[0].replace('jaydensbrowser://', 'https://');
@@ -83,14 +77,28 @@ ipcMain.on('window-maximize', () => {
 });
 ipcMain.on('window-close', () => win && win.close());
 
-// Allow renderer to request a window reload (fallback)
 ipcMain.on('window-restart', () => {
   if (win && win.webContents) {
-    try { win.webContents.reload(); } catch (e) { /* ignore */ }
+    try { win.webContents.reload(); } catch (e) {}
   }
 });
 
-// renderer -> main navigation (optional)
 ipcMain.on('navigate', (e, url) => {
   if (win) win.webContents.send('navigate', url);
+});
+
+ipcMain.handle('open-file-dialog', async () => {
+  const result = await dialog.showOpenDialog(win, {
+    properties: ['openFile'],
+    filters: [
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const filePath = result.filePaths[0];
+    const fileUrl = 'file:///' + filePath.replace(/\\/g, '/');
+    return fileUrl;
+  }
+  return null;
 });
