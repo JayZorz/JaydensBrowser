@@ -1,7 +1,8 @@
 # WARNING
 This "browser" does not support the following:
 ```
-WebGL / WebGL2
+WebGL
+WebGL2
 WebGPU
 Extensions
 Add-ons
