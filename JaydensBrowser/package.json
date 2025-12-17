@@ -1,6 +1,8 @@
 {
   "name": "jaydens-browser",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "description": "A modern, customizable web browser built with Electron",
+  "author": "Jayden",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -8,6 +10,7 @@
     "build:win": "electron-builder --win"
   },
   "devDependencies": {
+    "electron": "^27.0.0",
     "electron-builder": "^26.0.12"
   },
   "build": {
