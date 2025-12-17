@@ -1,4 +1,4 @@
-# Warning
+# WARNING
 This "browser" does not support the following:
 ```
 WebGL / WebGL2
@@ -32,4 +32,5 @@ Run this command in your terminal:
 npm run
 ```
 The app should launch as normal.
-Alternaitvely, you can move the shortcut provided to your desktop or elsewhere to start the browser.
+
+Alternatively, you can move the shortcut provided to your desktop or elsewhere to start the browser.
