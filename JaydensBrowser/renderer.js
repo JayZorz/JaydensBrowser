@@ -3,9 +3,20 @@ const { ipcRenderer } = require('electron');
 const tabsContainer = document.getElementById('tabs-container');
 const content = document.getElementById('content');
 const address = document.getElementById('address');
+const titleText = document.querySelector('.title-text');
 
 let tabs = [];
 let activeTab = null;
+
+// Update title with version from package.json
+try {
+  const packageJson = require('../package.json');
+  if (titleText && packageJson.version) {
+    titleText.textContent = `Jaydens' Browser (Stable Build ${packageJson.version})`;
+  }
+} catch (e) {
+  console.warn('Could not load version from package.json:', e);
+}
 
 function safeGetURL(webview) {
   try { return webview.getURL(); } catch (e) { return ''; }
@@ -27,22 +38,18 @@ function createTab(startURL) {
   tabEl.appendChild(titleSpan);
   tabEl.appendChild(closeBtn);
 
-  // webview
   const web = document.createElement('webview');
   web.setAttribute('partition', 'persist:main');
   web.src = startURL || 'homepage.html';
   web.style.display = 'none';
 
-  // events: update title when page updates
   web.addEventListener('page-title-updated', (e) => {
     if (e && e.title) titleSpan.textContent = e.title;
   });
 
-  // Update title based on file:// URLs (extract filename without extension)
   web.addEventListener('did-navigate', (e) => {
     if (activeTab && activeTab.web === web && e && e.url) {
       address.value = e.url;
-      // If it's a file URL, extract filename without extension
       if (e.url.startsWith('file://')) {
         const fileMatch = e.url.match(/\/([^\/]+)$/);
         if (fileMatch) {
@@ -56,7 +63,6 @@ function createTab(startURL) {
   web.addEventListener('did-navigate-in-page', (e) => {
     if (activeTab && activeTab.web === web && e && e.url) {
       address.value = e.url;
-      // If it's a file URL, extract filename without extension
       if (e.url.startsWith('file://')) {
         const fileMatch = e.url.match(/\/([^\/]+)$/);
         if (fileMatch) {
@@ -68,11 +74,7 @@ function createTab(startURL) {
     }
   });
 
-  // dom-ready: ensure webview methods are available
   web.addEventListener('dom-ready', () => {
-    // optional: enable devtools open if needed
-    // web.openDevTools();
-    // if this tab is active then show current URL
     if (activeTab && activeTab.web === web) {
       address.value = safeGetURL(web) || '';
     }
@@ -156,6 +158,29 @@ if (btnReload) btnReload.addEventListener('click', () => {
     try { activeTab.web.reload(); } catch (e) {}
   }
 });
+
+const btnFile = document.getElementById('file');
+if (btnFile) {
+  btnFile.addEventListener('click', async () => {
+    console.log('File button clicked');
+    try {
+      console.log('Opening file dialog...');
+      const fileUrl = await ipcRenderer.invoke('open-file-dialog');
+      console.log('File selected:', fileUrl);
+      if (fileUrl && activeTab && activeTab.web) {
+        address.value = fileUrl;
+        activeTab.web.loadURL(fileUrl);
+        console.log('Loaded file:', fileUrl);
+      } else {
+        console.log('No file selected or no active tab');
+      }
+    } catch (err) {
+      console.error('File dialog error:', err);
+    }
+  });
+} else {
+  console.warn('File button (#file) not found in DOM');
+}
 
 /* Address bar enter -> loadURL */
 if (address) {
