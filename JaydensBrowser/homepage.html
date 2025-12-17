@@ -38,10 +38,8 @@
       searchBar.focus();
       const list = document.getElementById('suggestions');
 
-      // Auto-focus the search bar
-
       let timer = null;
-      let selectedIndex = -1; // for keyboard navigation
+      let selectedIndex = -1;
 
       function clearSuggestions() {
         list.innerHTML = '';
@@ -64,7 +62,6 @@
           });
 
           li.addEventListener('mousemove', () => {
-            // highlight on hover
             updateHover(idx);
           });
 
